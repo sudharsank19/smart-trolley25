@@ -1,0 +1,157 @@
+package com.example.qrcodescanner;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.journeyapps.barcodescanner.CaptureActivity;
+import com.example.qrcodescanner.models.ProductItem; // Updated import
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+    private static final int SCAN_REQUEST_CODE = 100;
+    private List<ProductItem> products; // Updated type
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        LinearLayout productContainer = findViewById(R.id.productContainer);
+
+        // Initialize the product list
+        products = new ArrayList<>();
+        products.add(new ProductItem("Product 1", "$10.00", R.drawable.fanta, 1));
+        products.add(new ProductItem("Product 2", "$15.00", R.drawable.sprite, 2));
+        products.add(new ProductItem("Product 1", "$10.00", R.drawable.fanta, 1));
+        products.add(new ProductItem("Product 2", "$15.00", R.drawable.sprite, 2));
+
+        // Populate the product container
+        for (ProductItem product : products) { // Updated type
+            LinearLayout productItem = new LinearLayout(this);
+            productItem.setOrientation(LinearLayout.VERTICAL);
+            productItem.setPadding(8, 8, 8, 8);
+
+            ImageView imageView = new ImageView(this);
+            imageView.setLayoutParams(new LinearLayout.LayoutParams(500, 400));
+            imageView.setImageResource(product.getImageResId());
+
+            TextView nameTextView = new TextView(this);
+            nameTextView.setText(product.getName());
+            nameTextView.setTextSize(16f);
+
+            TextView priceTextView = new TextView(this);
+            priceTextView.setText(product.getPrice());
+            priceTextView.setTextSize(14f);
+
+            TextView quantityTextView = new TextView(this);
+            quantityTextView.setText("Quantity: " + product.getQuantity());
+            quantityTextView.setTextSize(14f);
+
+            productItem.addView(imageView);
+            productItem.addView(nameTextView);
+            productItem.addView(priceTextView);
+            productItem.addView(quantityTextView);
+
+            productContainer.addView(productItem);
+        }
+    }
+
+    public void viewProducts(View view) {
+        Intent intent = new Intent(this, ProductListActivity.class);
+        startActivity(intent);
+    }
+
+    public void proceedToPayment(View view) {
+        double totalAmount = getTotalAmount();
+        Intent intent = new Intent(this, PaymentActivity.class);
+        intent.putExtra("TOTAL_AMOUNT", totalAmount);
+        startActivity(intent);
+    }
+
+    public void launchScanner(View view) {
+        Intent intent = new Intent(this, CaptureActivity.class);
+        startActivityForResult(intent, SCAN_REQUEST_CODE);
+    }
+
+    public void generateQRCode(View view) {
+        Intent intent = new Intent(this, QRCodeGeneratorActivity.class);
+        startActivity(intent);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SCAN_REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                String result = data.getStringExtra("SCAN_RESULT");
+                ProductItem scannedProduct = fetchProductData(result); // Updated type
+                if (scannedProduct != null) {
+                    Intent intent = new Intent(this, ProductListActivity.class);
+                    intent.putExtra("PRODUCT_NAME", scannedProduct.getName());
+                    intent.putExtra("PRODUCT_PRICE", scannedProduct.getPrice());
+                    intent.putExtra("PRODUCT_QUANTITY", scannedProduct.getQuantity());
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(this, "Invalid product data scanned. Please ensure the format is correct.", Toast.LENGTH_SHORT).show();
+                }
+            } else if (resultCode == RESULT_CANCELED) {
+                Toast.makeText(this, "Scan canceled", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private ProductItem fetchProductData(String scannedData) { // Updated return type
+        if (scannedData == null || scannedData.isEmpty()) {
+            return null; // Return null if scanned data is invalid
+        }
+
+        String[] parts = scannedData.split(", ");
+        String productName = "";
+        double productPrice = -1.0; // Use -1 as an invalid price
+        int productQuantity = -1; // Use -1 as an invalid quantity
+
+        for (String part : parts) {
+            if (part.startsWith("Name: ")) {
+                productName = part.substring(6);
+            } else if (part.startsWith("Price: ")) {
+                try {
+                    productPrice = Double.parseDouble(part.substring(7));
+                } catch (NumberFormatException e) {
+                    productPrice = -1.0; // Set to invalid if parsing fails
+                }
+            } else if (part.startsWith("Quantity: ")) {
+                try {
+                    productQuantity = Integer.parseInt(part.substring(10));
+                } catch (NumberFormatException e) {
+                    productQuantity = -1; // Set to invalid if parsing fails
+                }
+            }
+        }
+
+        // Validate the extracted data
+        if (productName.isEmpty() || productPrice < 0 || productQuantity < 0) {
+            return null; // Return null if any data is invalid
+        }
+
+        return new ProductItem(productName, String.valueOf(productPrice), 0, productQuantity); // Image resource ID is set to 0 as a placeholder
+    }
+
+    private double getTotalAmount() {
+        double total = 0.0;
+        if (products != null) {
+            for (ProductItem product : products) { // Updated type
+                total += product.getTotal();
+            }
+        }
+        return total;
+    }
+}

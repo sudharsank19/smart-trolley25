@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name"></string>
+<string name="search_hint">    Search...</string>
+    <string name="view_products_button">View Products Button</string>
+    <string name="view_products">View Products</string>
+    <string name="launch_scanner_button">Launch Scanner Button</string>
+    <string name="launch_scanner">Launch Scanner</string>
+    <string name="generate_qr_code_button">Generate QR Code Button</string>
+    <string name="generate_qr_code">Generate QR Code</string>
+</resources>
